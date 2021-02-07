@@ -32,7 +32,7 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
   if (order_type.toUpperCase() == "LIMIT") {
     var order_type = "Limit";
     var price = limitprice != undefined ? limitprice : Number(bybit_getPrice_(productcode, position, exchange));
-    var param_str = "api_key=" + key + "close_on_trigger=false" + "&order_type=" + order_type + "&price=" + price + "&qty=" + volume + "&reduce_only=false" + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
+    var param_str = "api_key=" + key + "&close_on_trigger=false" + "&order_type=" + order_type + "&price=" + price + "&qty=" + volume + "&reduce_only=false" + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
   } else if (order_type.toUpperCase() == "MARKET") {
     var order_type = "Market";
     var param_str = "api_key=" + key + "&close_on_trigger=false" + "&order_type=" + order_type + "&qty=" + volume + "&reduce_only=false" + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
@@ -91,6 +91,7 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
   var response = UrlFetchApp.fetch(url, options);
   if (response != null) {
     var json = JSON.parse(response.getContentText());
+    console.log(json)
     return json.result.order_id;
   }
 }
