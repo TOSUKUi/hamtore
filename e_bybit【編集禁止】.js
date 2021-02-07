@@ -1,8 +1,8 @@
 function bybit_sendOrder_(productcode, position, volume, exchange, order_type, limitprice) {
   var timestamp = Date.now().toString();
   var method = 'POST';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/order/create';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/order/create';
 
   if (exchange == "bybit") {
     key = bybit_key;
@@ -11,6 +11,7 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
     key = bybit_testnet_key;
     secret = bybit_testnet_secret;
   }
+
 
   if (position.toUpperCase() == "BUY") {
     var position = "Buy";
@@ -21,15 +22,20 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
   if (volume < minimumVolume) {
     volume = minimumVolume;
   }
-  volume = Number(volume).toFixed(0);
+
+  if(productcode.indexOf('USDT') < -1){
+    volume = Number(volume).toFixed(0);
+  }else{
+    volume = Number(volume).toFixed(3);
+  }
 
   if (order_type.toUpperCase() == "LIMIT") {
     var order_type = "Limit";
     var price = limitprice != undefined ? limitprice : Number(bybit_getPrice_(productcode, position, exchange));
-    var param_str = "api_key=" + key + "&order_type=" + order_type + "&price=" + price + "&qty=" + volume + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
+    var param_str = "api_key=" + key + "close_on_trigger=false" + "&order_type=" + order_type + "&price=" + price + "&qty=" + volume + "&reduce_only=false" + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
   } else if (order_type.toUpperCase() == "MARKET") {
     var order_type = "Market";
-    var param_str = "api_key=" + key + "&order_type=" + order_type + "&qty=" + volume + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
+    var param_str = "api_key=" + key + "&close_on_trigger=false" + "&order_type=" + order_type + "&qty=" + volume + "&reduce_only=false" + "&side=" + position + "&symbol=" + productcode + "&time_in_force=GoodTillCancel" + "&timestamp=" + timestamp;
   }
 
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);
@@ -41,7 +47,9 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
   if (order_type == "Market") {
     var body = JSON.stringify({
       api_key: key,
+      close_on_trigger: false,
       order_type: order_type,
+      reduce_only: false,
       qty: volume,
       side: position,
       symbol: productcode,
@@ -52,13 +60,15 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
   } else if (order_type == "Limit") {
     var body = JSON.stringify({
       api_key: key,
+      close_on_trigger: false,
       order_type: order_type,
+      price: price,
       qty: volume,
+      reduce_only: false,
       side: position,
       symbol: productcode,
       time_in_force: "GoodTillCancel",
       timestamp: timestamp,
-      price: price,
       sign: sign
     });
   }
@@ -73,7 +83,9 @@ function bybit_sendOrder_(productcode, position, volume, exchange, order_type, l
     url: url,
     method: method,
     payload: body,
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json'
+    }
   };
 
   var response = UrlFetchApp.fetch(url, options);
@@ -94,8 +106,8 @@ function bybit_getPrice_(productcode, position, exchange) {
 
   var timestamp = Math.floor(new Date().getTime() / 1000) - 60;
   var method = 'GET';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/public/' + usdt_path + '/tickers';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/public/linear' : '/v2/public'
+  var path = usdt_path + '/tickers';
   var param_str = "symbol=" + productcode.toUpperCase();
 
   if (exchange == "bybit_testnet") {
@@ -107,7 +119,9 @@ function bybit_getPrice_(productcode, position, exchange) {
   var options = {
     url: url,
     method: method,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   };
 
   //送信してレスポンス取得
@@ -134,8 +148,8 @@ function bybit_getOrder_(order_id, productcode, exchange, position) {
 
   var timestamp = Date.now().toString();
   var method = 'GET';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/order';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/order';
   var param_str = "api_key=" + key + "&order_id=" + order_id + "&symbol=" + productcode + "&timestamp=" + timestamp;
 
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);
@@ -153,7 +167,9 @@ function bybit_getOrder_(order_id, productcode, exchange, position) {
   var options = {
     url: url,
     method: method,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   };
 
   //送信してレスポンス取得
@@ -163,6 +179,9 @@ function bybit_getOrder_(order_id, productcode, exchange, position) {
   var json = JSON.parse(response.getContentText());
   var ordStatus = json.result.order_status;
   var outstanding = Number(json.result.leaves_qty).toFixed(0);
+  if (productcode.indexOf('USDT') > -1){
+    outstanding = Number(json.result.leaves_qty).toFixed(8);
+  }
   var time = json.result.created_at;
   return [ordStatus, outstanding, time];
 }
@@ -178,8 +197,8 @@ function bybit_Cancel_(order_id, productcode, exchange) {
 
   var timestamp = Date.now().toString();
   var method = 'POST';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/order/cancel';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/order/cancel';
 
   var param_str = "api_key=" + key + "&order_id=" + order_id + "&symbol=" + productcode + "&timestamp=" + timestamp;
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);
@@ -206,7 +225,9 @@ function bybit_Cancel_(order_id, productcode, exchange) {
     url: url,
     method: method,
     payload: body,
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json'
+    }
   };
 
   var response = UrlFetchApp.fetch(url, options);
@@ -224,8 +245,8 @@ function bybit_getTime_(exchange, productcode, order_id) {
 
   var timestamp = Date.now().toString();
   var method = 'GET';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/order';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/order';
   var param_str = "api_key=" + key + "&order_id=" + order_id + "&symbol=" + productcode + "&timestamp=" + timestamp;
 
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);
@@ -243,7 +264,9 @@ function bybit_getTime_(exchange, productcode, order_id) {
   var options = {
     url: url,
     method: method,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   };
 
   //送信してレスポンス取得
@@ -296,8 +319,8 @@ function bybit_getPositions_(exchange, productcode) {
 
   var timestamp = Date.now().toString();
   var method = 'GET';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/position/list';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/position/list';
   var param_str = "api_key=" + key + "&symbol=" + productcode + "&timestamp=" + timestamp;
 
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);
@@ -315,7 +338,9 @@ function bybit_getPositions_(exchange, productcode) {
   var options = {
     url: url,
     method: method,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   };
 
   //送信してレスポンス取得

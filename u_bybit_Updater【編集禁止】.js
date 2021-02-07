@@ -105,8 +105,8 @@ function bybit_getExecutions_(productcode, order_id, time) {
 
   var timestamp = Date.now().toString();
   var method = 'GET';
-  var usdt_path = productcode.indexOf('USDT') > -1 ? 'lienar' : ''
-  var path = '/v2/private/' + usdt_path + '/order';
+  var usdt_path = productcode.indexOf('USDT') > -1 ? '/private/linear' : '/v2/private'
+  var path = usdt_path + '/order';
   var param_str = "api_key=" + key + "&order_id=" + order_id + "&symbol=" + productcode + "&timestamp=" + timestamp;
 
   var signature = Utilities.computeHmacSha256Signature(param_str, secret);

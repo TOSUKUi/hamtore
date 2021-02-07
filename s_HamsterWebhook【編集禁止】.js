@@ -4,12 +4,12 @@ var secret;
 var minimumVolume = Number(bybit_minimumVolume);
 var regex = new RegExp(/^{{.+}}$/);
 var remessage = new RegExp(/^(strategy|\[strategy\]|\[st\]|\[ST\])?([^ :]+).*:.+ (buy|sell|buyalert|sellalert) @ (-?\d+) .+ (-?\d+).*$/);
-var MAXTRYNUM = 720;
+var MAXTRYNUM = 1;
 
-function doPost(e){
+function doPost(e) {
   // contextを受け取る
   var message = e.postData.getDataAsString();
-  
+
   var ret = interpretMessage_(message);
   var strategy = ret[0];
   var position = ret[1];
@@ -18,18 +18,18 @@ function doPost(e){
   var position_size = ret[4];
   var limitprice = ret[5];
   var limitcancel = ret[6];
-  
-  if(createOrder_(strategy, position, leverage, memo, position_size, limitprice, limitcancel) == Status.retry){
-    insertRetry_([message,1]);
+
+  if (createOrder_(strategy, position, leverage, memo, position_size, limitprice, limitcancel) == Status.retry) {
+    insertRetry_([message, 1]);
   }
 }
 
 
-function retryWebhook_(){
+function retryWebhook_() {
   var lock = LockService.getScriptLock();
 
   //重複動作防止
-  if(!lock.tryLock(55000)){
+  if (!lock.tryLock(55000)) {
     console.log("end :locking retryWebhook");
     return;
   }
@@ -37,12 +37,12 @@ function retryWebhook_(){
   // retry用のテーブルを準備
   var sheet = spreadSheet.getSheetByName('retry');
   var sheet_value = sheet.getDataRange().getValues();
-  
+
   var strategylist = [];
-  for(var i = sheet_value.length - 1; i>=1; i--){
+  for (var i = sheet_value.length - 1; i >= 1; i--) {
     var message = sheet_value[i][0];
     var trynum = Number(sheet_value[i][1]) || 1;
-    
+
     var ret = interpretMessage_(message);
     var strategy = ret[0];
     var position = ret[1];
@@ -51,17 +51,19 @@ function retryWebhook_(){
     var position_size = ret[4];
     var limitprice = ret[5];
     var limitcancel = ret[6];
-    
+
     //短時間重複取引チェック
-    if(strategylist.indexOf(strategy) == -1){
+    if (strategylist.indexOf(strategy) == -1) {
       strategylist.push(strategy);
-      if(createOrder_(strategy, position, leverage, memo, position_size, limitprice, limitcancel) == Status.retry && trynum < MAXTRYNUM){
-        sheet.getRange(i+1,1,1,2).setValues([[message,trynum+1]]);
+      if (createOrder_(strategy, position, leverage, memo, position_size, limitprice, limitcancel) == Status.retry && trynum < MAXTRYNUM) {
+        sheet.getRange(i + 1, 1, 1, 2).setValues([
+          [message, trynum + 1]
+        ]);
         // do not remove row
         continue;
       }
     }
-    sheet.deleteRow(i+1);
+    sheet.deleteRow(i + 1);
   }
   lock.releaseLock();
 }
@@ -73,12 +75,12 @@ function insertRetry_(values) {
     try {
       var sheet = spreadSheet.getSheetByName('retry');
       sheet.appendRow(values);
-    }catch(e){
+    } catch (e) {
       sendMessage_(e);
-    }finally{
+    } finally {
       lock.releaseLock();
     }
-  }else{
+  } else {
     sendMessage_("write retry failed because of lock.");
   }
 }

@@ -14,8 +14,8 @@ function history_insert_(time,productcode,price,position,strategy,volume,exchang
     totalvolume = Number(totalvolume).toFixed(4);
     volume = Number(volume).toFixed(4);
   }else if (exchange == "bybit" || exchange == "bybit_testnet"){
-    totalvolume = Number(totalvolume).toFixed(0);
-    volume = Number(volume).toFixed(0);
+    totalvolume = Number(totalvolume).toFixed(4);
+    volume = Number(volume).toFixed(4);
   }
 
   try{

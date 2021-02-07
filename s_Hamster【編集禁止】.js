@@ -70,7 +70,7 @@ function interpretMessage_(message) {
     memo = message;
     position_size = Number(parseInt(m[5]));
   } else { // custom alert message
-    try {  // json alert message
+    try { // json alert message
       obj = JSON.parse(message);
       strategy = obj.strategy;
       position = obj.position.toUpperCase();
@@ -79,7 +79,7 @@ function interpretMessage_(message) {
       position_size = Number(parseInt(obj.position_size));
       limitprice = Number(obj.limitprice);
       limitcancel = Boolean(obj.limitcancel);
-    } catch (e) {  // , alert message
+    } catch (e) { // , alert message
       var ary = message.split(',');
       strategy = ary[1];
       position = Number(parseInt(ary[2])) || ary[2];
@@ -254,8 +254,8 @@ function createOrder_(strategy, position, leverage, memo, position_size, limitpr
                 totalvolume = Number(totalvolume).toFixed(4);
                 volume = Number(volume).toFixed(4);
               } else if (exchange == "bybit" || exchange == "bybit_testnet") {
-                totalvolume = Number(totalvolume).toFixed(0);
-                volume = Number(volume).toFixed(0);
+                totalvolume = Number(totalvolume).toFixed(4);
+                volume = Number(volume).toFixed(4);
               }
               console.log(totalvolume);
               console.log(time);
